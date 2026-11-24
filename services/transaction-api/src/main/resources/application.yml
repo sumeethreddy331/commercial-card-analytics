@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: ${TRANSACTIONS_DB_URL:jdbc:postgresql://127.0.0.1:5432/cards}
+    username: ${TRANSACTIONS_DB_USER:cards}
+    password: ${TRANSACTIONS_DB_PASSWORD}
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      fail-on-numbers-for-enums: true
+    mapper:
+      allow-coercion-of-scalars: false
+  kafka:
+    bootstrap-servers: ${TRANSACTIONS_KAFKA_SERVERS:127.0.0.1:19092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 4000
+        delivery.timeout.ms: 10000
+  mvc:
+    log-request-details: false
+logging:
+  structured:
+    format:
+      console: logstash
+transactions:
+  topic: ${TRANSACTIONS_TOPIC:commercial-card.transactions.v1}
+  partitions: ${TRANSACTIONS_PARTITIONS:3}
+  replicas: ${TRANSACTIONS_REPLICAS:1}
