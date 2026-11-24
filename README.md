@@ -1,6 +1,6 @@
 # Commercial Card Transaction Processing and Analytics
 
-This Day 1 milestone implements transaction intake and lookup, PostgreSQL persistence, and Kafka publication. The remaining assignment covers the Bronze, Silver, and Gold pipeline, the analytics API, and the final demo.
+A Spring Boot service that validates and records synthetic commercial card events, publishes them to Kafka, and exposes transaction history. PostgreSQL stores each event and its publication status. See the [architecture and event contract](docs/architecture.md) for the data flow and API behavior.
 
 ## Start locally
 
@@ -16,7 +16,7 @@ mvn -pl services/transaction-api spring-boot:run
 
 Spring Boot applies the Flyway migration and provisions the Kafka topic on startup. Stop the Java process with Ctrl+C and run `docker compose -f infra/compose.yaml down` to stop dependencies. Named volumes retain the database and Kafka log. An optional `lake` Compose profile defines MinIO for the later pipeline phase. Set local-only `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` before starting it.
 
-## Demo the intake milestone
+## Submit sample events
 
 Use a fresh local stack for the exact outcomes below. In a second shell, from the repo root, submit the fixture and then retrieve the transaction's history.
 
@@ -52,7 +52,7 @@ docker compose -f infra/compose.yaml exec kafka /opt/kafka/bin/kafka-console-con
 
 ## Tests
 
-Run `mvn verify` from the repository root. The suite uses an embedded Kafka broker and native PostgreSQL binaries, with no Docker dependency. Run it under a regular user on a platform supported by the embedded PostgreSQL test library. The tests exercise the real Flyway migration, SQL, and Kafka producer through the Spring MVC request path.
+Run `mvn verify` from the repository root. The suite uses an embedded Kafka broker and native PostgreSQL binaries, with no Docker dependency. Run it under a regular user on a platform supported by the embedded PostgreSQL test library. Eight integration tests passed against embedded PostgreSQL and Kafka. They cover Flyway migrations, event validation, duplicate detection, transaction lookup, Kafka delivery, and retry after a simulated publish failure. Docker Compose was checked for valid YAML. Container startup still needs a live check.
 
 ## Troubleshooting
 

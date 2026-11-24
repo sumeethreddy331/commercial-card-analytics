@@ -28,7 +28,7 @@ Clients POST a JSON object to `/api/v1/transactions`. The Kafka message adds `sc
 | status | APPROVED, DECLINED or REVERSED |
 | sourceSystem | Nonblank producer label up to 64 characters |
 
-Intake accepts late events and stores `eventTime` independently of `ingestedAt`. Lifecycle reconciliation and transition rules belong to curation. Money uses a fixed two-decimal scale for this synthetic dataset. Per-currency scales and currency conversion are outside the milestone.
+Intake accepts late events and stores `eventTime` independently of `ingestedAt`. Lifecycle reconciliation and transition rules belong to curation. Money uses a fixed two-decimal scale for this synthetic dataset. Each event retains its original currency.
 
 ## API outcomes
 
@@ -55,7 +55,7 @@ Errors include `code`, `message`, and an `errors` array. An invalid request can 
 
 The ledger has one row per event ID. A PostgreSQL primary key and `INSERT ... ON CONFLICT DO NOTHING` protect against concurrent inserts. The service commits the original event before attempting Kafka publication. A second, bounded database transaction locks that event row while checking payload equality, sending to Kafka, and recording successful publication. Published replays return the existing receipt. Pending replays attempt publication again. The API exposes the pending state on lookup.
 
-A lost Kafka acknowledgement or a database failure after acknowledgement can leave a Kafka record with a pending ledger row. Retrying may deliver a duplicate, so the downstream consumer must deduplicate by event ID. There is no background dispatcher in this milestone. Clients must retry pending events, and operators can identify them by `published_at IS NULL`. Holding the row lock during a broker call limits concurrent retries for the same ID. A production dispatcher or transactional outbox can remove broker latency from request threads and recover pending events independently of clients.
+A lost Kafka acknowledgement or a database failure after acknowledgement can leave a Kafka record with a pending ledger row. Retrying may deliver a duplicate, so the downstream consumer must deduplicate by event ID. Clients retry pending events by resubmitting the original ID and payload. Operators can identify pending events by `published_at IS NULL`. Holding the row lock during a broker call limits concurrent retries for the same ID. A production dispatcher or transactional outbox can remove broker latency from request threads and recover pending events independently of clients.
 
 Kafka uses the versioned topic `commercial-card.transactions.v1`, three partitions, and the synthetic card token as the key. Events for a card share a partition while the partition count and key mapping remain stable. Partition offsets show broker append order, which can differ from event time and from request arrival order when requests are concurrent or retried. The planned curation consumer group is `transaction-curation-v1`. It should commit offsets only after durable writes and support at-least-once delivery.
 
